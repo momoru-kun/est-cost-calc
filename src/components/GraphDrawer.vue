@@ -4,7 +4,7 @@
       <v-btn
         v-if="!add_link"
         outlined
-        class="mr-2"
+        class="ma-2"
         :color="add_vert ? 'error' : 'primary'"
         @click="add_vert = !add_vert"
       >
@@ -13,13 +13,20 @@
       <v-btn
         v-if="!add_vert"
         outlined
+        class="ma-2"
         :color="add_link ? 'error' : 'primary'"
         @click="link_parental = null; add_link = !add_link"
       >
         {{ add_link ? 'Отмена' : 'Создать связь' }}
       </v-btn>
+      <v-btn
+        outlined
+        color="primary"
+        class="ma-2"
+        @click="getPaths()"
+      > Расчитать </v-btn>
     </v-row>
-    <v-row>
+    <v-row ref="canvaContainer">
       <canvas
         ref="graph_canva"
         width="600px"
@@ -50,7 +57,7 @@
                   {{ vert.init ? 'S' : '' }}{{ vert.childrens.length == 0 ? 'F' : '' }}
                 </div>
               </td>
-              <td class="pa-4">
+              <td class="pa-4 node-name">
                 <v-text-field
                   outlined
                   label="Наименование работы"
@@ -58,7 +65,7 @@
                   hide-details
                 ></v-text-field>
               </td>
-              <td class="pa-4">
+              <td class="pa-4 node-code">
                 <v-text-field
                   outlined
                   label="Код"
@@ -67,7 +74,7 @@
                   hide-details
                 ></v-text-field>
               </td>
-              <td class="pa-4">
+              <td class="pa-4 node-est">
                 <v-text-field
                   outlined
                   label="Длительность"
@@ -76,7 +83,7 @@
                   hide-details
                 ></v-text-field>
               </td>
-              <td class="pa-4">
+              <td class="pa-4 node-cost">
                 <v-text-field
                   outlined
                   label="Стоимость"
@@ -85,7 +92,7 @@
                   hide-details
                 ></v-text-field>
               </td>
-              <td class="pa-4">
+              <td class="pa-4 node-del">
                 <v-btn
                   icon
                   color="error"
@@ -98,12 +105,6 @@
           </tbody>
         </template>
       </v-simple-table>
-      <v-btn
-        outlined
-        color="primary"
-        class="mt-4"
-        @click="getPaths()"
-      > Расчитать </v-btn>
     </v-row>
     <v-row v-if="result.length > 0" class="pt-6">
       <v-expansion-panels>
@@ -121,8 +122,8 @@
                 </thead>
                 <tbody>
                   <tr
-                    v-for="path in result"
-                    :key="`result-${path.length}`"
+                    v-for="(path, index) in result"
+                    :key="`result-${index}`"
                   >
                     <td>
                       {{ getPathCodes(path) }}
@@ -151,6 +152,22 @@
         </v-expansion-panel>
       </v-expansion-panels>
     </v-row>
+    <v-snackbar
+      v-model="snackbar"
+      timeout="5000"
+    >
+      {{ snackText }}
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          color="pink"
+          text
+          v-bind="attrs"
+          @click="snackbar = false; snackText = ''"
+        >
+            Close
+          </v-btn>
+      </template>
+    </v-snackbar>
   </v-container>
 </template>
 
@@ -168,9 +185,15 @@ export default {
     link_parental: null,
     verticies: [],
     result: [],
+    snackbar: false,
+    snackText: '',
   }),
   mounted() {
+    let containerDims = this.$refs.canvaContainer.getBoundingClientRect();
     let canva = this.$refs.graph_canva;
+
+    canva.width = containerDims.width;
+    canva.height = containerDims.width * 0.5
     this.ctx = canva.getContext('2d');
     this.redraw()
   },
@@ -178,16 +201,6 @@ export default {
     this.redraw()
   },
   methods: {
-    get_chart_opts() {
-      return {
-        width: 800,
-        height: 500,
-        chart: {
-          title: 'Cтоимость к длительности',
-        },
-        hAxis: {title: 'Временные затраты, часов'},
-        vAxis: {title: 'Финансовые затраты, руб.'}
-    }},
     getPathCodes(path) {
       let codes = path.map(item => item.code)
       return codes.join(', ')
@@ -217,6 +230,27 @@ export default {
       this.result = []
       let start = this.verticies.find(vert => vert.init)
       var path = [start]
+      let finishNodes = 0;
+      let startIsChild = false;
+      this.verticies.forEach(node => {
+        if (node.childrens.length == 0) finishNodes += 1;
+        startIsChild = node.childrens.find(child => child.init)
+      })
+      if (startIsChild) {
+        this.snackbar = true
+        this.snackText = 'Граф не может быть ацикличным (замкнут сам на себе)!'
+        return;
+      }
+      if (finishNodes == 0) {
+        this.snackbar = true
+        this.snackText = 'У графа должна быть одна финишная нода (без дочерних вершин)!'
+        return;
+      }
+      if (finishNodes > 1) {
+        this.snackbar = true
+        this.snackText = 'У вас больше одной финишной ноды!'
+        return;
+      }
       this.paths(start.childrens, path);
     },
     removeVert(removable_vert) {
@@ -320,5 +354,17 @@ export default {
 canvas {
   border: solid 1px rgba(25, 118, 210, 0.24);
   border-radius: 4px;
+}
+.node-name {
+  min-width: 250px;
+}
+.node-code {
+  min-width: 150px;
+}
+.node-est {
+  min-width: 200px;
+}
+.node-cost {
+  min-width: 200px;
 }
 </style>

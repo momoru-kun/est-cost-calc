@@ -1,5 +1,5 @@
 <template>
-  <div class="ma-4">
+  <div class="ma-4 pa-4" style="max-width: 100%; overflow-x:auto;">
     <v-row class="justify-end">
     <v-btn
       text
@@ -29,7 +29,6 @@ export default {
       data.addColumn('number', 'Бюджет, рублей');
 
       data.addRows(this.data);
-
       var options = {
         width: 800,
         height: 500,
