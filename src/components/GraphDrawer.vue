@@ -193,7 +193,7 @@ export default {
     let canva = this.$refs.graph_canva;
 
     canva.width = containerDims.width;
-    canva.height = containerDims.width * 0.5
+    canva.height = window.innerHeight/2;
     this.ctx = canva.getContext('2d');
     this.redraw()
   },
@@ -238,7 +238,7 @@ export default {
       })
       if (startIsChild) {
         this.snackbar = true
-        this.snackText = 'Граф не может быть ацикличным (замкнут сам на себе)!'
+        this.snackText = 'Граф не может быть цикличным (замкнут сам на себе)!'
         return;
       }
       if (finishNodes == 0) {
